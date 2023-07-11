@@ -243,7 +243,7 @@ const LONG_FORM_LEN_THREE_BYTES_MAX: usize = (1 << (8 * 3)) - 1;
 const LONG_FORM_LEN_FOUR_BYTES: u8 = 0x84;
 
 // Maximum size that can be expressed in a four byte long form der len.
-const LONG_FORM_LEN_FOUR_BYTES_MAX: usize = (1 << (8 * 4)) - 1;
+const LONG_FORM_LEN_FOUR_BYTES_MAX: usize = ((1u64 << (8u64 * 4u64)) - 1u64) as usize;
 
 // TODO: investigate taking decoder as a reference to reduce generated code
 // size.
