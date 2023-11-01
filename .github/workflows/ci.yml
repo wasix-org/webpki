@@ -188,6 +188,20 @@ jobs:
           toolchain: 1.57.0
       - run: cargo check --lib --all-features
 
+  cross:
+    name: Check cross compilation targets
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: taiki-e/install-action@cross
+
+      - run: cross build --target i686-unknown-linux-gnu
+
   coverage:
     runs-on: ubuntu-20.04
     steps:
@@ -205,6 +219,7 @@ jobs:
 
       - uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_UPLOAD_TOKEN }}
           files: ./lcov.info
           fail_ci_if_error: true
           verbose: true

@@ -59,6 +59,10 @@ For these tasks you may prefer using webpki in combination with libraries like
 
 # Changelog
 
+# Changelog
+
+- 0.101.1 (2023-07-05)
+  - Fixed 32-bit architecture compatibility.
 - 0.101.0 (2023-07-04)
   - _Breaking change_: added `EndEntity::verify_is_valid_tls_client_cert`
     argument for certificate revocation lists.
@@ -75,9 +79,15 @@ For these tasks you may prefer using webpki in combination with libraries like
   - Changed `EndEntityCert::verify_is_valid_for_subject_name` to ignore invalid
     names when verifying cert is valid for a provided subject.
   - MSRV increased to Rust 1.57.
+    <<<<<<< HEAD
+
+* # 0.100.1 (2023-03-28)
+
 - 0.100.1 (2023-03-28)
+  > > > > > > > 4a39e2b67d4cddf58b0ea16dd821a04ee2240058
   - Relax constraint on serial number length.
-- 0.100.0 (2023-03-13) - first release of `rustls-webpki` crate.
+
+* 0.100.0 (2023-03-13) - first release of `rustls-webpki` crate.
   - Allow verification of certificates with IP address subjectAltNames.
     `EndEntityCert::verify_is_valid_for_subject_name` was added, and
     `EndEntityCert::verify_is_valid_for_dns_name` was removed.
@@ -88,7 +98,7 @@ For these tasks you may prefer using webpki in combination with libraries like
     path building where they appear.
   - Relax requirement that serial numbers are positive to deal with issuers
     that cannot generate correct ASN.1 but nevertheless persist in doing so.
-- 0.22.0 (2021-04-10) - last upstream release of `webpki` crate.
+* 0.22.0 (2021-04-10) - last upstream release of `webpki` crate.
 
 # Demo
 
