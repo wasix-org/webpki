@@ -43,14 +43,17 @@ not confusingly overlap with `webpki` versions.
   a given DNS name or IP address by considering the allowed usage of the
   certificate and additional constraints.
 
-# Limitations
+
+Limitations
+===============
 
 webpki offers a minimal feature set tailored to the needs of Rustls. Notably it
 does not offer:
 
-- Certificate or keypair generation
-- Access to arbitrary certificate extensions
-- Parsing/representation of certificate subjects, or human-friendly display of
+* Support for self-signed certificates
+* Certificate or keypair generation
+* Access to arbitrary certificate extensions
+* Parsing/representation of certificate subjects, or human-friendly display of
   these fields
 
 For these tasks you may prefer using webpki in combination with libraries like
@@ -61,44 +64,7 @@ For these tasks you may prefer using webpki in combination with libraries like
 
 # Changelog
 
-- 0.101.1 (2023-07-05)
-  - Fixed 32-bit architecture compatibility.
-- 0.101.0 (2023-07-04)
-  - _Breaking change_: added `EndEntity::verify_is_valid_tls_client_cert`
-    argument for certificate revocation lists.
-  - _Breaking change_: removed `Time::try_from`.
-  - _Breaking change_: removed `From<DnsNameRef<'_>` impl for `DnsName`.
-  - _Breaking change_: replaced `AsRef<[u8]>` with `AsRef<str>` for `DnsNameRef`.
-  - Added certificate revocation list (CRL) support.
-  - Improved specificity of errors returned from
-    `EndEntityCert::verify_is_valid_tls_client_cert` and
-    `EndEntityCert::verify_is_valid_tls_server_cert`.
-  - Improved error specificity for malformed subject alternate names.
-  - Added `EndEntityCert::dns_names` method for returning a list of DNS subject
-    alternate names from an end entity cert.
-  - Changed `EndEntityCert::verify_is_valid_for_subject_name` to ignore invalid
-    names when verifying cert is valid for a provided subject.
-  - MSRV increased to Rust 1.57.
-    <<<<<<< HEAD
-
-* # 0.100.1 (2023-03-28)
-
-- 0.100.1 (2023-03-28)
-  > > > > > > > 4a39e2b67d4cddf58b0ea16dd821a04ee2240058
-  - Relax constraint on serial number length.
-
-* 0.100.0 (2023-03-13) - first release of `rustls-webpki` crate.
-  - Allow verification of certificates with IP address subjectAltNames.
-    `EndEntityCert::verify_is_valid_for_subject_name` was added, and
-    `EndEntityCert::verify_is_valid_for_dns_name` was removed.
-  - Make `Error` type non-exhaustive.
-  - Reject non-contiguous netmasks in IP address name constraints.
-  - Name constraints of type dNSName and iPAddress now work and are tested.
-    directoryName name constraints are not implemented and will prevent
-    path building where they appear.
-  - Relax requirement that serial numbers are positive to deal with issuers
-    that cannot generate correct ASN.1 but nevertheless persist in doing so.
-* 0.22.0 (2021-04-10) - last upstream release of `webpki` crate.
+Release history can be found [on GitHub](https://github.com/rustls/webpki/releases).
 
 # Demo
 

@@ -12,7 +12,7 @@ use std::io::{ErrorKind, Read, Write};
 use std::path::Path;
 use std::sync::Mutex;
 
-use webpki::{BorrowedCertRevocationList, CertRevocationList};
+use webpki::{BorrowedCertRevocationList, CertRevocationList, OwnedCertRevocationList};
 
 /// Lazy initialized CRL issuer to be used when generating CRL data. Includes
 /// `KeyUsagePurpose::CrlSign` key usage bit.
@@ -49,7 +49,7 @@ fn load_or_generate(crl_path: impl AsRef<Path> + Copy, revoked_count: usize) -> 
         Ok(mut crl_file) => {
             let mut crl_der = Vec::new();
             crl_file.read_to_end(&mut crl_der).unwrap();
-            return crl_der;
+            crl_der
         }
         Err(e) => match e.kind() {
             ErrorKind::NotFound => match File::create(crl_path) {
@@ -57,7 +57,7 @@ fn load_or_generate(crl_path: impl AsRef<Path> + Copy, revoked_count: usize) -> 
                 Ok(mut crl_file) => {
                     let new_crl = generate_crl(revoked_count);
                     crl_file.write_all(&new_crl).unwrap();
-                    return new_crl;
+                    new_crl
                 }
             },
             e => {
@@ -73,18 +73,19 @@ fn generate_crl(revoked_count: usize) -> Vec<u8> {
     (0..revoked_count).for_each(|i| {
         revoked_certs.push(RevokedCertParams {
             serial_number: SerialNumber::from((i + 1) as u64),
-            revocation_time: date_time_ymd(2024, 06, 17),
+            revocation_time: date_time_ymd(2024, 6, 17),
             reason_code: Some(RevocationReason::KeyCompromise),
             invalidity_date: None,
         });
     });
 
     let crl = CertificateRevocationListParams {
-        this_update: date_time_ymd(2023, 06, 17),
-        next_update: date_time_ymd(2024, 06, 17),
+        this_update: date_time_ymd(2023, 6, 17),
+        next_update: date_time_ymd(2024, 6, 17),
         crl_number: SerialNumber::from(1234),
         alg: &PKCS_ECDSA_P256_SHA256,
         key_identifier_method: KeyIdMethod::Sha256,
+        issuing_distribution_point: None,
         revoked_certs,
     };
     let crl = CertificateRevocationList::from_params(crl).unwrap();
@@ -103,12 +104,7 @@ fn bench_parse_borrowed_crl_small(c: &mut Bencher) {
 fn bench_parse_owned_crl_small(c: &mut Bencher) {
     let crl_bytes = load_or_generate("./benches/small.crl.der", SMALL_CRL_CERT_COUNT);
 
-    c.iter(|| {
-        BorrowedCertRevocationList::from_der(&crl_bytes)
-            .unwrap()
-            .to_owned()
-            .unwrap()
-    });
+    c.iter(|| OwnedCertRevocationList::from_der(&crl_bytes).unwrap());
 }
 
 /// Benchmark parsing a medium CRL file into a borrowed representation..
@@ -122,12 +118,7 @@ fn bench_parse_borrowed_crl_medium(c: &mut Bencher) {
 fn bench_parse_owned_crl_medium(c: &mut Bencher) {
     let crl_bytes = load_or_generate("./benches/medium.crl.der", MEDIUM_CRL_CERT_COUNT);
 
-    c.iter(|| {
-        BorrowedCertRevocationList::from_der(&crl_bytes)
-            .unwrap()
-            .to_owned()
-            .unwrap()
-    });
+    c.iter(|| OwnedCertRevocationList::from_der(&crl_bytes).unwrap());
 }
 
 /// Benchmark parsing a large CRL file into a borrowed representation..
@@ -141,19 +132,16 @@ fn bench_parse_borrowed_crl_large(c: &mut Bencher) {
 fn bench_parse_owned_crl_large(c: &mut Bencher) {
     let crl_bytes = load_or_generate("./benches/large.crl.der", LARGE_CRL_CERT_COUNT);
 
-    c.iter(|| {
-        BorrowedCertRevocationList::from_der(&crl_bytes)
-            .unwrap()
-            .to_owned()
-            .unwrap()
-    });
+    c.iter(|| BorrowedCertRevocationList::from_der(&crl_bytes).unwrap());
 }
 
 /// Benchmark searching a small CRL file in borrowed representation for a serial that does not
 /// appear. Doesn't include the time it takes to parse the CRL in the benchmark task.
 fn bench_search_borrowed_crl_small(c: &mut Bencher) {
     let crl_bytes = load_or_generate("./benches/small.crl.der", SMALL_CRL_CERT_COUNT);
-    let crl = BorrowedCertRevocationList::from_der(&crl_bytes).unwrap();
+    let crl: CertRevocationList = BorrowedCertRevocationList::from_der(&crl_bytes)
+        .unwrap()
+        .into();
 
     c.iter(|| black_box(assert!(matches!(crl.find_serial(FAKE_SERIAL), Ok(None)))));
 }
@@ -162,10 +150,9 @@ fn bench_search_borrowed_crl_small(c: &mut Bencher) {
 /// appear. Doesn't include the time it takes to parse the CRL in the benchmark task.
 fn bench_search_owned_crl_small(c: &mut Bencher) {
     let crl_bytes = load_or_generate("./benches/small.crl.der", SMALL_CRL_CERT_COUNT);
-    let crl = BorrowedCertRevocationList::from_der(&crl_bytes)
+    let crl: CertRevocationList = OwnedCertRevocationList::from_der(&crl_bytes)
         .unwrap()
-        .to_owned()
-        .unwrap();
+        .into();
 
     c.iter(|| black_box(assert!(matches!(crl.find_serial(FAKE_SERIAL), Ok(None)))));
 }
@@ -174,7 +161,9 @@ fn bench_search_owned_crl_small(c: &mut Bencher) {
 /// appear. Doesn't include the time it takes to parse the CRL in the benchmark task.
 fn bench_search_borrowed_crl_medium(c: &mut Bencher) {
     let crl_bytes = load_or_generate("./benches/medium.crl.der", MEDIUM_CRL_CERT_COUNT);
-    let crl = BorrowedCertRevocationList::from_der(&crl_bytes).unwrap();
+    let crl: CertRevocationList = BorrowedCertRevocationList::from_der(&crl_bytes)
+        .unwrap()
+        .into();
 
     c.iter(|| black_box(assert!(matches!(crl.find_serial(FAKE_SERIAL), Ok(None)))));
 }
@@ -183,10 +172,9 @@ fn bench_search_borrowed_crl_medium(c: &mut Bencher) {
 /// appear. Doesn't include the time it takes to parse the CRL in the benchmark task.
 fn bench_search_owned_crl_medium(c: &mut Bencher) {
     let crl_bytes = load_or_generate("./benches/medium.crl.der", MEDIUM_CRL_CERT_COUNT);
-    let crl = BorrowedCertRevocationList::from_der(&crl_bytes)
+    let crl: CertRevocationList = OwnedCertRevocationList::from_der(&crl_bytes)
         .unwrap()
-        .to_owned()
-        .unwrap();
+        .into();
 
     c.iter(|| black_box(assert!(matches!(crl.find_serial(FAKE_SERIAL), Ok(None)))));
 }
@@ -195,7 +183,9 @@ fn bench_search_owned_crl_medium(c: &mut Bencher) {
 /// appear. Doesn't include the time it takes to parse the CRL in the benchmark task.
 fn bench_search_borrowed_crl_large(c: &mut Bencher) {
     let crl_bytes = load_or_generate("./benches/large.crl.der", LARGE_CRL_CERT_COUNT);
-    let crl = BorrowedCertRevocationList::from_der(&crl_bytes).unwrap();
+    let crl: CertRevocationList = BorrowedCertRevocationList::from_der(&crl_bytes)
+        .unwrap()
+        .into();
 
     c.iter(|| black_box(assert!(matches!(crl.find_serial(FAKE_SERIAL), Ok(None)))));
 }
@@ -204,10 +194,9 @@ fn bench_search_borrowed_crl_large(c: &mut Bencher) {
 /// appear. Doesn't include the time it takes to parse the CRL in the benchmark task.
 fn bench_search_owned_crl_large(c: &mut Bencher) {
     let crl_bytes = load_or_generate("./benches/large.crl.der", LARGE_CRL_CERT_COUNT);
-    let crl = BorrowedCertRevocationList::from_der(&crl_bytes)
+    let crl: CertRevocationList = OwnedCertRevocationList::from_der(&crl_bytes)
         .unwrap()
-        .to_owned()
-        .unwrap();
+        .into();
 
     c.iter(|| black_box(assert!(matches!(crl.find_serial(FAKE_SERIAL), Ok(None)))));
 }
